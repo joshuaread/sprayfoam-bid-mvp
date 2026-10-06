@@ -4,8 +4,6 @@ import {
   computeEstimate,
   ENGINE_VERSION,
   ladderPricePerSqft,
-  normalizePriceBook,
-  PRICE_BOOK_SCHEMA_VERSION,
   pitchFactor,
   priceFromMargin,
   quoteRange,
@@ -148,7 +146,8 @@ describe('estimate totals', () => {
     // margin 50% on job cost (1187.5) -> 2375, plus trip 120 at cost
     close(t.price, 2495, 0.01);
     close(t.marginAmt, 1187.5, 0.01);
-    close(t.marginPct, (1187.5 / 2495) * 100, 0.1);
+    // margin % is on the price excluding the pass-through trip, so it matches the 50% target
+    close(t.marginPct, 50, 0.1);
     close(t.pricePerSqft, 2.5, 0.01);
     expect(t.minJobApplied).toBe(false);
   });
@@ -160,6 +159,7 @@ describe('estimate totals', () => {
     close(withTrip.price - none.price, 150, 0.01);
     close(withTrip.marginAmt, none.marginAmt, 0.01);
     close(none.marginPct, 50, 0.01);
+    close(withTrip.marginPct, 50, 0.1);
   });
   it('trip charge and mileage pass through at cost in ladder mode', () => {
     const areas = [free(1000, [{ id: 'l', productId: 'oc', inches: 3 }])];
@@ -167,11 +167,13 @@ describe('estimate totals', () => {
     const withTrip = computeEstimate({ priceBook: PB, pricingMode: 'ladder', miles: 25, areas });
     close(withTrip.price - none.price, 150, 0.01);
     close(withTrip.marginAmt, none.marginAmt, 0.01);
+    close(withTrip.marginPct, none.marginPct, 0.1);
   });
   it('min job floor still gives margin = price - total cost', () => {
     const t = computeEstimate({ priceBook: { ...PB, charges: { ...PB.charges, minJob: 5000 } }, areas: [free(100, [{ id: 'l', productId: 'oc', inches: 3 }])] });
     expect(t.minJobApplied).toBe(true);
     close(t.marginAmt, 5000 - t.totalCost, 0.01);
+    close(t.marginPct, (t.marginAmt / (5000 - t.tripCost)) * 100, 0.1);
   });
   it('flat labor $/bf', () => {
     const t = computeEstimate({ priceBook: { ...PB, labor: { ...PB.labor, mode: 'flat', laborPerBf: 0.1 } }, areas: [free(1000, [{ id: 'l', productId: 'oc', inches: 5 }])] });
@@ -292,27 +294,8 @@ describe('widget quote range', () => {
   });
 });
 
-describe('price book migration', () => {
-  it('sample book has a labeled sample row for other foam', () => {
-    const rows = SAMPLE_PRICE_BOOK.ladder.filter((r) => r.kind === 'other');
-    expect(rows.length).toBe(1);
-    expect(rows[0].label ?? '').toMatch(/sample/i);
-    expect(SAMPLE_PRICE_BOOK.schemaVersion).toBe(PRICE_BOOK_SCHEMA_VERSION);
-  });
-  it('merges sample other rows into an older saved book and drops materialCostBasis', () => {
-    const old = { ...PB, ladder: PB.ladder.filter((r) => r.kind !== 'other'), materialCostBasis: 'rounded' } as PriceBook;
-    const pb = normalizePriceBook(old);
-    expect(pb.ladder.filter((r) => r.kind === 'other').length).toBe(1);
-    expect(pb.ladder.length).toBe(old.ladder.length + 1);
-    expect(pb.schemaVersion).toBe(PRICE_BOOK_SCHEMA_VERSION);
-    expect('materialCostBasis' in pb).toBe(false);
-    expect(normalizePriceBook(pb)).toEqual(pb);
-  });
-  it('keeps existing other rows and respects rows deleted after migration', () => {
-    const own = { ...PB, ladder: [...PB.ladder] };
-    expect(normalizePriceBook(own).ladder).toEqual(PB.ladder);
-    const migrated = normalizePriceBook({ ...PB, ladder: PB.ladder.filter((r) => r.kind !== 'other') });
-    const deleted = { ...migrated, ladder: migrated.ladder.filter((r) => r.kind !== 'other') };
-    expect(normalizePriceBook(deleted).ladder.some((r) => r.kind === 'other')).toBe(false);
+describe('sample price book', () => {
+  it('seeds a sample ladder row for other foam', () => {
+    expect(SAMPLE_PRICE_BOOK.ladder.filter((r) => r.kind === 'other').length).toBe(1);
   });
 });

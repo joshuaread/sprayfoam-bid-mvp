@@ -203,7 +203,9 @@ export function computeEstimate(input: EstimateInput): EstimateTotals {
   const minJobApplied = calculatedPrice < minJob;
   const price = minJobApplied ? minJob : calculatedPrice;
   const marginAmt = price - totalCost;
-  const marginPctActual = price > 0 ? (marginAmt / price) * 100 : 0;
+  // Margin % is on the marked-up part of the price; trip/mileage pass through at cost and are excluded.
+  const priceExPassThrough = price - tripCost;
+  const marginPctActual = priceExPassThrough > 0 ? (marginAmt / priceExPassThrough) * 100 : 0;
 
   return {
     engine_version: ENGINE_VERSION,

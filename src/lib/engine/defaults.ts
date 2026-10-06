@@ -1,10 +1,4 @@
-import type { LadderRow, PriceBook } from './types';
-
-export const PRICE_BOOK_SCHEMA_VERSION = 2;
-
-export const SAMPLE_OTHER_LADDER: LadderRow[] = [
-  { kind: 'other', thicknessIn: 2, pricePerSqft: 1.8, label: 'Sample data - replace with your own' },
-];
+import type { PriceBook } from './types';
 
 /**
  * SAMPLE NUMBERS ONLY. These are placeholder values so the demo works out of the box.
@@ -57,7 +51,6 @@ export const SAMPLE_PRICE_BOOK: PriceBook = {
   charges: { tripCharge: 150, mileageRate: 1.5, minJob: 1500 },
   pricingMode: 'margin',
   targetMarginPct: 40,
-  schemaVersion: PRICE_BOOK_SCHEMA_VERSION,
   ladder: [
     { kind: 'open_cell', thicknessIn: 3.5, pricePerSqft: 1.1 },
     { kind: 'open_cell', thicknessIn: 5.5, pricePerSqft: 1.55 },
@@ -66,23 +59,6 @@ export const SAMPLE_PRICE_BOOK: PriceBook = {
     { kind: 'closed_cell', thicknessIn: 1, pricePerSqft: 1.15 },
     { kind: 'closed_cell', thicknessIn: 2, pricePerSqft: 2.1 },
     { kind: 'closed_cell', thicknessIn: 3, pricePerSqft: 3.0 },
-    ...SAMPLE_OTHER_LADDER,
+    { kind: 'other', thicknessIn: 2, pricePerSqft: 1.8 },
   ],
 };
-
-/**
- * Brings a price book saved by an older version up to date. Books saved before
- * schema 2 get the sample 'other' ladder rows merged in once; after that the
- * contractor owns those rows (deleting them is respected). Pure; returns a new object.
- */
-export function normalizePriceBook(raw: PriceBook): PriceBook {
-  const { materialCostBasis: _removed, ...pb } = raw as PriceBook & { materialCostBasis?: unknown };
-  const ladder = Array.isArray(pb.ladder) ? pb.ladder : [];
-  if ((pb.schemaVersion ?? 1) >= PRICE_BOOK_SCHEMA_VERSION) return { ...pb, ladder };
-  const hasOther = ladder.some((r) => r.kind === 'other');
-  return {
-    ...pb,
-    ladder: hasOther ? ladder : [...ladder, ...SAMPLE_OTHER_LADDER.map((r) => ({ ...r }))],
-    schemaVersion: PRICE_BOOK_SCHEMA_VERSION,
-  };
-}

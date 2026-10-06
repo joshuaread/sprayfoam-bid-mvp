@@ -29,7 +29,7 @@ export default function PriceBookPage() {
     setTimeout(() => setSaved(''), 1200);
   };
   const setProduct = (id: string, patch: Partial<Product>) => save({ ...pb, products: pb.products.map((p) => (p.id === id ? { ...p, ...patch } : p)) });
-  const setLadder = (i: number, patch: Partial<LadderRow>) => save({ ...pb, ladder: pb.ladder.map((r, j) => (j === i ? { ...r, ...patch, label: undefined } : r)) });
+  const setLadder = (i: number, patch: Partial<LadderRow>) => save({ ...pb, ladder: pb.ladder.map((r, j) => (j === i ? { ...r, ...patch } : r)) });
 
   return (
     <div className="space-y-4">
@@ -179,7 +179,6 @@ export default function PriceBookPage() {
             <button type="button" className="mb-1 px-2 text-lg text-slate-400 hover:text-red-600" aria-label="Remove ladder row" onClick={() => save({ ...pb, ladder: pb.ladder.filter((_, j) => j !== i) })}>
               x
             </button>
-            {r.label ? <span className="col-span-full -mt-1 text-xs text-amber-800">{r.label}</span> : null}
           </div>
         ))}
         <button type="button" className="btn-secondary" onClick={() => save({ ...pb, ladder: [...pb.ladder, { kind: 'open_cell', thicknessIn: 1, pricePerSqft: 0 }] })}>

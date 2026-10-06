@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Badge, PageTitle } from '@/components/ui';
-import { duplicateEstimate } from '@/lib/estimates';
+import { DUPLICATE_KEPT_SNAPSHOT_NOTICE, duplicateEstimate } from '@/lib/estimates';
 import { money, num } from '@/lib/format';
 import type { Estimate } from '@/lib/models';
 import { store } from '@/lib/storage';
@@ -50,7 +50,8 @@ export default function EstimatesPage() {
                 type="button"
                 className="btn-secondary !px-2 !py-1 !text-xs"
                 onClick={async () => {
-                  const d = await duplicateEstimate(e);
+                  const { estimate: d, keptSnapshot } = await duplicateEstimate(e);
+                  if (keptSnapshot) alert(DUPLICATE_KEPT_SNAPSHOT_NOTICE);
                   router.push(`/estimate/?id=${d.id}`);
                 }}
               >

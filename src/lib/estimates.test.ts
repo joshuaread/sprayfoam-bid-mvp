@@ -1,5 +1,5 @@
 import { SAMPLE_PRICE_BOOK, type PriceBook } from './engine';
-import { createEstimate, duplicateEstimate, newArea } from './estimates';
+import { createEstimate, DUPLICATE_KEPT_SNAPSHOT_NOTICE, duplicateEstimate, newArea } from './estimates';
 import { store } from './storage';
 import { describe, expect, it } from './testkit';
 
@@ -35,7 +35,8 @@ describe('duplicate estimate and price book snapshots', () => {
 
   it('plain Duplicate re-snapshots the current price book; the original keeps its own', async () => {
     const { est, edited } = await setup();
-    const copy = await duplicateEstimate(est);
+    const { estimate: copy, keptSnapshot } = await duplicateEstimate(est);
+    expect(keptSnapshot).toBe(false);
     expect(copy.id).not.toBe(est.id);
     expect(copy.version).toBe(1);
     expect(copy.priceBookSnapshot).toEqual(edited);
@@ -50,7 +51,8 @@ describe('duplicate estimate and price book snapshots', () => {
 
   it('Save as new version keeps the snapshot', async () => {
     const { est } = await setup();
-    const v2 = await duplicateEstimate(est, true);
+    const { estimate: v2, keptSnapshot } = await duplicateEstimate(est, true);
+    expect(keptSnapshot).toBe(false);
     expect(v2.number).toBe(est.number);
     expect(v2.version).toBe(est.version + 1);
     expect(v2.priceBookSnapshot).toEqual(est.priceBookSnapshot);
@@ -58,13 +60,31 @@ describe('duplicate estimate and price book snapshots', () => {
     expect(v2.totals!.price).toBe(est.totals!.price);
   });
 
-  it('an old saved price book without other rows loads with the sample row merged in', async () => {
-    await store.resetAll();
-    const legacy = JSON.parse(JSON.stringify(SAMPLE_PRICE_BOOK)) as PriceBook;
-    legacy.ladder = legacy.ladder.filter((r) => r.kind !== 'other');
-    delete legacy.schemaVersion;
-    await store.savePriceBook(legacy);
-    const loaded = await store.getPriceBook();
-    expect(loaded.ladder.filter((r) => r.kind === 'other').length).toBe(1);
+  it('keeps the source snapshot and flags a notice when any layer product is missing from the current book', async () => {
+    const { est } = await setup();
+    const withMissing = {
+      ...est,
+      areas: [
+        ...est.areas,
+        { ...newArea(SAMPLE_PRICE_BOOK, 'freeform', 'Area 2'), layers: [{ id: 'lx', productId: 'deleted-product', inches: 2 }] },
+      ],
+    };
+    await store.saveEstimate(withMissing);
+    const { estimate: copy, keptSnapshot } = await duplicateEstimate(withMissing);
+    expect(keptSnapshot).toBe(true);
+    expect(copy.id).not.toBe(est.id);
+    expect(copy.version).toBe(1);
+    expect(copy.priceBookSnapshot).toEqual(est.priceBookSnapshot);
+    expect(copy.snapshotAt).toBe(est.snapshotAt);
+    expect(DUPLICATE_KEPT_SNAPSHOT_NOTICE).toMatch(/no longer in your price book/);
+  });
+
+  it('keeps the source estimate pricing mode and margin on duplicate', async () => {
+    const { est } = await setup();
+    const src = { ...est, pricingMode: 'ladder' as const, marginPct: 33 };
+    await store.saveEstimate(src);
+    const { estimate: copy } = await duplicateEstimate(src);
+    expect(copy.pricingMode).toBe('ladder');
+    expect(copy.marginPct).toBe(33);
   });
 });

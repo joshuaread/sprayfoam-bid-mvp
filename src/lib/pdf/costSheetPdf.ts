@@ -94,7 +94,7 @@ export function buildCostSheetPdf(e: Estimate, b: Branding): jsPDF {
     [e.pricingMode === 'ladder' ? 'Calculated price (ladder + coatings at margin + trip at cost)' : `Calculated price = (cost excl. trip) / (1 - ${num(e.marginPct, 1)}%) + trip at cost`, money(t?.calculatedPrice ?? 0, 2)],
     ['Minimum job', `${money(t?.minJob ?? 0, 2)}${t?.minJobApplied ? ' (APPLIED)' : ''}`],
     ['Price', money(t?.price ?? 0, 2)],
-    ['Gross margin', `${money(t?.marginAmt ?? 0, 2)} (${num(t?.marginPct ?? 0, 1)}%)`],
+    ['Gross margin (% excludes trip/mileage pass-through)', `${money(t?.marginAmt ?? 0, 2)} (${num(t?.marginPct ?? 0, 1)}%)`],
     ['Price per sq ft', money(t?.pricePerSqft ?? 0, 2)],
   ];
   for (const [k, v] of lines) c.row([{ text: k, w: 330 }, { text: v, w: 200, align: 'right', bold: k === 'Price' }], 9);

@@ -51,8 +51,6 @@ export interface LadderRow {
   kind: LadderKind;
   thicknessIn: number;
   pricePerSqft: number;
-  /** optional note shown beside the row, e.g. to mark seeded sample data */
-  label?: string;
 }
 
 export type PricingMode = 'margin' | 'ladder';
@@ -65,8 +63,6 @@ export interface PriceBook {
   /** target gross margin percent, e.g. 40 = 40% */
   targetMarginPct: number;
   ladder: LadderRow[];
-  /** storage schema marker; books saved before 2 have no 'other' ladder rows (see normalizePriceBook) */
-  schemaVersion?: number;
   /** label shown in UI; seeded books are clearly marked as sample numbers */
   label?: string;
 }

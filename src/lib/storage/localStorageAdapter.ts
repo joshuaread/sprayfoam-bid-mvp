@@ -1,4 +1,4 @@
-import { normalizePriceBook, SAMPLE_PRICE_BOOK, type PriceBook } from '../engine';
+import { SAMPLE_PRICE_BOOK, type PriceBook } from '../engine';
 import { DEFAULT_BRANDING, DEFAULT_WIDGET, type Branding, type Customer, type Estimate, type Lead, type OutboxEmail, type WidgetConfig } from '../models';
 import type { StorageAdapter } from './adapter';
 
@@ -42,7 +42,7 @@ function upsert<T extends { id: string }>(key: string, item: T): void {
 
 export class LocalStorageAdapter implements StorageAdapter {
   async getPriceBook() {
-    return normalizePriceBook(read<PriceBook>(K.priceBook, SAMPLE_PRICE_BOOK));
+    return read<PriceBook>(K.priceBook, SAMPLE_PRICE_BOOK);
   }
   async savePriceBook(pb: PriceBook) {
     write(K.priceBook, pb);
