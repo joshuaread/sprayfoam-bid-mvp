@@ -11,7 +11,7 @@ import type {
   ProductSets,
 } from './types';
 
-export const ENGINE_VERSION = '0.1.0';
+export const ENGINE_VERSION = '0.2.0';
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const pos = (v: unknown): number => {

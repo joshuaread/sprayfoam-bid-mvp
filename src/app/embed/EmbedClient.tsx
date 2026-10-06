@@ -6,6 +6,7 @@ import { WidgetFlow } from '@/components/WidgetFlow';
 import type { PriceBook } from '@/lib/engine';
 import type { Branding, WidgetConfig } from '@/lib/models';
 import { store } from '@/lib/storage';
+import { K as STORAGE_KEYS } from '@/lib/storage/localStorageAdapter';
 
 export function EmbedClient() {
   const params = useSearchParams();
@@ -22,7 +23,10 @@ export function EmbedClient() {
     void load();
     // The setup page edits localStorage in the parent window; storage events fire here (same origin).
     // Only the preview follows settings changes, so a live widget never resets under a homeowner.
-    const onStorage = () => {
+    const watched: (string | null)[] = [STORAGE_KEYS.widget, STORAGE_KEYS.priceBook, STORAGE_KEYS.branding];
+    const onStorage = (e: StorageEvent) => {
+      // key is null when storage is cleared entirely
+      if (e.key !== null && !watched.includes(e.key)) return;
       clearTimeout(timer);
       timer = setTimeout(() => void load(), 400);
     };
