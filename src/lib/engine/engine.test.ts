@@ -231,6 +231,12 @@ describe('widget quote range', () => {
     expect(q.high).toBe(3000);
     expect(q.minJobApplied).toBe(true);
   });
+  it('rounded floor never displays below the min job', () => {
+    // price 1700, -15% -> 1445 < minJob 1520, so the floor is 1520 (not rounded down to 1500)
+    const q = quoteRange({ ...PB, charges: { ...PB.charges, minJob: 1520 } }, { sqft: 1000, foamPref: 'oc', ocInches: 5, ccInches: 2, bandPct: 15 });
+    expect(q.minJobApplied).toBe(true);
+    expect(q.low).toBe(1520);
+  });
   it('sample price book produces a sensible $/sq ft', () => {
     const t = computeEstimate({ priceBook: SAMPLE_PRICE_BOOK, areas: [free(1500, [{ id: 'l', productId: 'oc-sample', inches: 5.5 }])] });
     expect(t.pricePerSqft).toBeGreaterThan(0.8);
