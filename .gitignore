@@ -10,3 +10,6 @@ next-env.d.ts
 .DS_Store
 # generated at build time by scripts/gen-icons.mjs
 public/icons/*.png
+
+# compiled unit tests
+.test-build/

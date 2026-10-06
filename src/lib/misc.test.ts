@@ -1,12 +1,12 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from './testkit';
 import { DEFAULT_WIDGET } from './models';
 import { decodeCfg, encodeCfg } from './widgetCfg';
 
 describe('engine purity', () => {
   it('src/lib/engine has no React or browser-only imports', () => {
-    const dir = join(__dirname, 'engine');
+    const dir = join(process.cwd(), 'src', 'lib', 'engine');
     for (const f of readdirSync(dir).filter((x) => x.endsWith('.ts'))) {
       const src = readFileSync(join(dir, f), 'utf8');
       expect(src, f).not.toMatch(/from ['"]react/);
@@ -27,11 +27,11 @@ describe('widget config encoding', () => {
 
 describe('naming rule', () => {
   it('never uses the competitor name in source, public files, or docs', () => {
-    const root = join(__dirname, '..', '..');
+    const root = process.cwd();
     const bad = new RegExp(['foam', 'bid'].join(''), 'i');
     const walk = (d: string): string[] =>
       readdirSync(d, { withFileTypes: true }).flatMap((e) => {
-        if (['node_modules', '.next', 'out', '.git'].includes(e.name)) return [];
+        if (['node_modules', '.next', 'out', '.git', '.test-build'].includes(e.name)) return [];
         const p = join(d, e.name);
         return e.isDirectory() ? walk(p) : [p];
       });
