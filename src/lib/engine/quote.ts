@@ -29,7 +29,7 @@ export function roundTo(n: number, step: number): number {
 function priceFor(pb: PriceBook, kind: ProductKind, inches: number, sqft: number) {
   const product = pb.products.find((p) => p.kind === kind && p.active);
   if (!product) return null;
-  // The range is the foam job only, before trip charge / min job; those are applied below.
+  // The range is the foam job only, before min job; trip charge is already included in the calculated price and min job is applied below.
   const t = computeEstimate({
     priceBook: { ...pb, charges: { ...pb.charges, minJob: 0 } },
     areas: [
@@ -68,7 +68,7 @@ export function quoteRange(pb: PriceBook, req: QuoteRequest): QuoteRange {
     minJobApplied = true;
   }
   if (high < minJob) high = minJob;
-  low = roundTo(low, 50);
+  low = Math.max(minJob, roundTo(low, 50));
   high = Math.max(low, roundTo(high, 50));
   return {
     low,
