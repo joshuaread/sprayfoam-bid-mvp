@@ -45,8 +45,10 @@ export interface JobCharges {
   minJob: number;
 }
 
+export type LadderKind = 'open_cell' | 'closed_cell' | 'other';
+
 export interface LadderRow {
-  kind: 'open_cell' | 'closed_cell';
+  kind: LadderKind;
   thicknessIn: number;
   pricePerSqft: number;
 }
@@ -61,8 +63,6 @@ export interface PriceBook {
   /** target gross margin percent, e.g. 40 = 40% */
   targetMarginPct: number;
   ladder: LadderRow[];
-  /** material cost from decimal sets (default) or from sets rounded up per product */
-  materialCostBasis?: 'decimal' | 'rounded';
   /** label shown in UI; seeded books are clearly marked as sample numbers */
   label?: string;
 }

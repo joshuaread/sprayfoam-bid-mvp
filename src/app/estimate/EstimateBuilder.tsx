@@ -161,7 +161,7 @@ export function EstimateBuilder() {
             type="button"
             className="btn-secondary !py-1"
             onClick={async () => {
-              const d = await duplicateEstimate(est, true);
+              const { estimate: d } = await duplicateEstimate(est, true);
               router.push(`/estimate/?id=${d.id}`);
             }}
           >
@@ -225,7 +225,7 @@ export function EstimateBuilder() {
             <NumberInput value={est.miles} onChange={(n) => update({ miles: n })} ariaLabel="Miles" />
           </Field>
           <div className="text-xs text-slate-500">
-            {est.pricingMode === 'margin' ? 'Price = cost / (1 - margin).' : 'Price = ladder $/sq ft by foam type + thickness, plus coatings at margin, plus trip.'}
+            {est.pricingMode === 'margin' ? 'Price = job cost / (1 - margin), plus trip at cost.' : 'Price = ladder $/sq ft by foam type + thickness, plus coatings at margin, plus trip at cost.'}
             <br />
             Min job {money(pb.charges.minJob)} · trip {money(pb.charges.tripCharge)}
           </div>
@@ -302,7 +302,7 @@ export function EstimateBuilder() {
                   ['Total cost', money(t.totalCost)],
                   ['Calculated price', money(t.calculatedPrice)],
                   ['Price', money(t.price)],
-                  ['Gross margin', `${money(t.marginAmt)} (${num(t.marginPct, 1)}%)`],
+                  ['Gross margin (% excl. trip)', `${money(t.marginAmt)} (${num(t.marginPct, 1)}%)`],
                 ] as const
               ).map(([k, v]) => (
                 <tr key={k} className="border-b border-slate-100">

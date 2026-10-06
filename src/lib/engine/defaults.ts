@@ -51,7 +51,6 @@ export const SAMPLE_PRICE_BOOK: PriceBook = {
   charges: { tripCharge: 150, mileageRate: 1.5, minJob: 1500 },
   pricingMode: 'margin',
   targetMarginPct: 40,
-  materialCostBasis: 'decimal',
   ladder: [
     { kind: 'open_cell', thicknessIn: 3.5, pricePerSqft: 1.1 },
     { kind: 'open_cell', thicknessIn: 5.5, pricePerSqft: 1.55 },
@@ -60,5 +59,6 @@ export const SAMPLE_PRICE_BOOK: PriceBook = {
     { kind: 'closed_cell', thicknessIn: 1, pricePerSqft: 1.15 },
     { kind: 'closed_cell', thicknessIn: 2, pricePerSqft: 2.1 },
     { kind: 'closed_cell', thicknessIn: 3, pricePerSqft: 3.0 },
+    { kind: 'other', thicknessIn: 2, pricePerSqft: 1.8 },
   ],
 };

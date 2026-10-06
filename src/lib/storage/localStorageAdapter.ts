@@ -3,7 +3,7 @@ import { DEFAULT_BRANDING, DEFAULT_WIDGET, type Branding, type Customer, type Es
 import type { StorageAdapter } from './adapter';
 
 const PREFIX = 'sfbb:v1:';
-const K = {
+export const K = {
   priceBook: PREFIX + 'priceBook',
   branding: PREFIX + 'branding',
   widget: PREFIX + 'widget',

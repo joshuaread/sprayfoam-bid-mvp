@@ -5,24 +5,13 @@ import { Field, NumField, PageTitle, TextField } from '@/components/ui';
 import { BASE_PATH } from '@/lib/format';
 import { DEFAULT_WIDGET, SITE_URL, type WidgetConfig } from '@/lib/models';
 import { store } from '@/lib/storage';
-import { encodeCfg } from '@/lib/widgetCfg';
 
 export default function WidgetSetupPage() {
   const [cfg, setCfg] = useState<WidgetConfig | null>(null);
   const [copied, setCopied] = useState('');
-  const [previewCfg, setPreviewCfg] = useState('');
   useEffect(() => {
-    store.getWidgetConfig().then((c) => {
-      setCfg(c);
-      setPreviewCfg(encodeCfg(c));
-    });
+    store.getWidgetConfig().then(setCfg);
   }, []);
-  // debounce the preview reload
-  useEffect(() => {
-    if (!cfg) return;
-    const t = setTimeout(() => setPreviewCfg(encodeCfg(cfg)), 400);
-    return () => clearTimeout(t);
-  }, [cfg]);
   const snippet = useMemo(
     () => `<div id="spray-foam-quote"></div>\n<script src="${SITE_URL}/widget.js" data-widget-key="${cfg?.widgetKey ?? ''}" data-target="#spray-foam-quote"></script>`,
     [cfg?.widgetKey],
@@ -114,7 +103,7 @@ export default function WidgetSetupPage() {
           <iframe
             title="Widget preview"
             className="h-[640px] w-full rounded border border-slate-200"
-            src={`${BASE_PATH}/embed/?preview=1&cfg=${previewCfg}`}
+            src={`${BASE_PATH}/embed/?preview=1`}
           />
         </section>
       </div>

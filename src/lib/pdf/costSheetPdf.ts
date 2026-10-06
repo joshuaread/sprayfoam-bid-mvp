@@ -4,6 +4,8 @@ import { money, num } from '../format';
 import type { Branding, Estimate } from '../models';
 import { Cursor } from './pdfHelpers';
 
+const LADDER_LABELS = { open_cell: 'OC', closed_cell: 'CC', other: 'Other' } as const;
+
 export function buildCostSheetPdf(e: Estimate, b: Branding): jsPDF {
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
   const t = e.totals;
@@ -43,13 +45,13 @@ export function buildCostSheetPdf(e: Estimate, b: Branding): jsPDF {
     `Labor: ${L.mode === 'flat' ? `flat $${num(L.laborPerBf, 3)}/bf` : `crew ${L.crewSize} x $${num(L.hourlyRate, 2)}/hr, production ${num(L.prodRateBfPerHr)} bf/hr`}`,
     { size: 8, indent: 8, gap: 0 },
   );
-  c.text(`Charges: trip $${num(pb.charges.tripCharge, 2)}, mileage $${num(pb.charges.mileageRate, 2)}/mi, minimum job $${num(pb.charges.minJob, 2)}; material cost basis: ${pb.materialCostBasis ?? 'decimal'} sets`, {
+  c.text(`Charges: trip $${num(pb.charges.tripCharge, 2)}, mileage $${num(pb.charges.mileageRate, 2)}/mi, minimum job $${num(pb.charges.minJob, 2)}; trip and mileage pass through at cost (no markup)`, {
     size: 8,
     indent: 8,
     gap: 0,
   });
   if (e.pricingMode === 'ladder') {
-    c.text(`Ladder: ${pb.ladder.map((r) => `${r.kind === 'open_cell' ? 'OC' : 'CC'} ${r.thicknessIn}" $${r.pricePerSqft}/sf`).join(', ')}`, { size: 8, indent: 8 });
+    c.text(`Ladder: ${pb.ladder.map((r) => `${LADDER_LABELS[r.kind]} ${r.thicknessIn}" $${r.pricePerSqft}/sf`).join(', ')}`, { size: 8, indent: 8 });
   }
   c.rule();
 
@@ -86,13 +88,13 @@ export function buildCostSheetPdf(e: Estimate, b: Branding): jsPDF {
     ['Sets (decimal / rounded up)', `${num(t?.sets ?? 0, 3)} / ${t?.setsRounded ?? 0}`],
     ['Material cost', money(t?.materialCost ?? 0, 2)],
     ['Labor', `${money(t?.laborCost ?? 0, 2)} (${num(t?.laborHours ?? 0, 2)} hr)`],
-    ['Trip + mileage', money(t?.tripCost ?? 0, 2)],
+    ['Trip + mileage (pass-through at cost, no markup)', money(t?.tripCost ?? 0, 2)],
     ['Coatings', money(t?.coatingCost ?? 0, 2)],
     ['Total cost', money(t?.totalCost ?? 0, 2)],
-    [e.pricingMode === 'ladder' ? 'Calculated price (ladder + coatings at margin + trip)' : `Calculated price = cost / (1 - ${num(e.marginPct, 1)}%)`, money(t?.calculatedPrice ?? 0, 2)],
+    [e.pricingMode === 'ladder' ? 'Calculated price (ladder + coatings at margin + trip at cost)' : `Calculated price = (cost excl. trip) / (1 - ${num(e.marginPct, 1)}%) + trip at cost`, money(t?.calculatedPrice ?? 0, 2)],
     ['Minimum job', `${money(t?.minJob ?? 0, 2)}${t?.minJobApplied ? ' (APPLIED)' : ''}`],
     ['Price', money(t?.price ?? 0, 2)],
-    ['Gross margin', `${money(t?.marginAmt ?? 0, 2)} (${num(t?.marginPct ?? 0, 1)}%)`],
+    ['Gross margin (% excludes trip/mileage pass-through)', `${money(t?.marginAmt ?? 0, 2)} (${num(t?.marginPct ?? 0, 1)}%)`],
     ['Price per sq ft', money(t?.pricePerSqft ?? 0, 2)],
   ];
   for (const [k, v] of lines) c.row([{ text: k, w: 330 }, { text: v, w: 200, align: 'right', bold: k === 'Price' }], 9);

@@ -158,25 +158,20 @@ export default function PriceBookPage() {
               <option value="ladder">Per-inch ladder</option>
             </select>
           </Field>
-          <NumField label="Target margin %" value={pb.targetMarginPct} onChange={(n) => save({ ...pb, targetMarginPct: n })} hint="price = cost / (1 - margin)" />
-          <Field label="Material cost from">
-            <select className="input" value={pb.materialCostBasis ?? 'decimal'} onChange={(e) => save({ ...pb, materialCostBasis: e.target.value as 'decimal' | 'rounded' })}>
-              <option value="decimal">Decimal sets</option>
-              <option value="rounded">Full sets (rounded up)</option>
-            </select>
-          </Field>
+          <NumField label="Target margin %" value={pb.targetMarginPct} onChange={(n) => save({ ...pb, targetMarginPct: n })} hint="price = job cost / (1 - margin) + trip at cost" />
         </div>
       </section>
 
       <section className="card space-y-2">
         <h2 className="text-lg font-semibold">Per-inch price ladder ($ / sq ft)</h2>
-        <p className="text-xs text-slate-500">Used in ladder mode. Thicknesses between rows are interpolated; outside the range they scale per inch.</p>
+        <p className="text-xs text-slate-500">Used in ladder mode. Thicknesses between rows are interpolated; outside the range they scale per inch. Products of kind Other foam price from their own Other foam rows.</p>
         {pb.ladder.map((r, i) => (
           <div key={i} className="grid grid-cols-[1.2fr_1fr_1fr_auto] items-end gap-2">
             <Field label="Foam">
               <select className="input" value={r.kind} onChange={(e) => setLadder(i, { kind: e.target.value as LadderRow['kind'] })}>
                 <option value="open_cell">Open cell</option>
                 <option value="closed_cell">Closed cell</option>
+                <option value="other">Other foam</option>
               </select>
             </Field>
             <NumField label="Inches" value={r.thicknessIn} onChange={(n) => setLadder(i, { thicknessIn: n })} />

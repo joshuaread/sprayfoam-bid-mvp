@@ -110,7 +110,10 @@ export async function createEstimate(partial: Partial<Estimate> = {}): Promise<E
   return out;
 }
 
-export async function duplicateEstimate(src: Estimate, asNewVersion = false): Promise<Estimate> {
+export const DUPLICATE_KEPT_SNAPSHOT_NOTICE =
+  'Some products in this estimate are no longer in your price book, so the copy kept its original prices.';
+
+export async function duplicateEstimate(src: Estimate, asNewVersion = false): Promise<{ estimate: Estimate; keptSnapshot: boolean }> {
   const now = new Date().toISOString();
   const copy: Estimate = {
     ...clone(src),
@@ -121,10 +124,22 @@ export async function duplicateEstimate(src: Estimate, asNewVersion = false): Pr
     createdAt: now,
     updatedAt: now,
   };
+  let keptSnapshot = false;
+  if (!asNewVersion) {
+    const current = await store.getPriceBook();
+    const ids = new Set(current.products.map((p) => p.id));
+    const missing = src.areas.some((a) => a.layers.some((l) => !ids.has(l.productId)));
+    if (missing) {
+      keptSnapshot = true;
+    } else {
+      copy.priceBookSnapshot = clone(current);
+      copy.snapshotAt = now;
+    }
+  }
   copy.areas = copy.areas.map((a) => ({ ...a, id: uid('area'), layers: a.layers.map((l) => ({ ...l, id: uid('layer') })) }));
   const out = recompute(copy);
   await store.saveEstimate(out);
-  return out;
+  return { estimate: out, keptSnapshot };
 }
 
 export async function convertLeadToEstimate(lead: Lead, widget: WidgetConfig): Promise<Estimate> {
