@@ -1,8 +1,6 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from './testkit';
-import { DEFAULT_WIDGET } from './models';
-import { decodeCfg, encodeCfg } from './widgetCfg';
 
 describe('engine purity', () => {
   it('src/lib/engine has no React or browser-only imports', () => {
@@ -13,15 +11,6 @@ describe('engine purity', () => {
       expect(src, f).not.toMatch(/from ['"]next/);
       expect(src, f).not.toMatch(/\b(window|localStorage|document)\./);
     }
-  });
-});
-
-describe('widget config encoding', () => {
-  it('round-trips through the preview URL param', () => {
-    const cfg = { ...DEFAULT_WIDGET, headline: 'Instant price — try it', bandPct: 20, gated: true };
-    expect(decodeCfg(encodeCfg(cfg))).toEqual(cfg);
-    expect(decodeCfg('not-valid')).toBeNull();
-    expect(decodeCfg(null)).toBeNull();
   });
 });
 

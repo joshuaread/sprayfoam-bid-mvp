@@ -121,6 +121,10 @@ export async function duplicateEstimate(src: Estimate, asNewVersion = false): Pr
     createdAt: now,
     updatedAt: now,
   };
+  if (!asNewVersion) {
+    copy.priceBookSnapshot = clone(await store.getPriceBook());
+    copy.snapshotAt = now;
+  }
   copy.areas = copy.areas.map((a) => ({ ...a, id: uid('area'), layers: a.layers.map((l) => ({ ...l, id: uid('layer') })) }));
   const out = recompute(copy);
   await store.saveEstimate(out);

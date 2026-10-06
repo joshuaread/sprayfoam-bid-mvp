@@ -29,7 +29,8 @@ export function roundTo(n: number, step: number): number {
 function priceFor(pb: PriceBook, kind: ProductKind, inches: number, sqft: number) {
   const product = pb.products.find((p) => p.kind === kind && p.active);
   if (!product) return null;
-  // The range is the foam job only, before trip charge / min job; those are applied below.
+  // Min job is switched off here and applied to the range below. The trip charge is inside
+  // calculatedPrice at cost (no markup); mileage is not (the widget doesn't know the distance).
   const t = computeEstimate({
     priceBook: { ...pb, charges: { ...pb.charges, minJob: 0 } },
     areas: [

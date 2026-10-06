@@ -4,6 +4,8 @@ import {
   computeEstimate,
   ENGINE_VERSION,
   ladderPricePerSqft,
+  normalizePriceBook,
+  PRICE_BOOK_SCHEMA_VERSION,
   pitchFactor,
   priceFromMargin,
   quoteRange,
@@ -20,6 +22,7 @@ const PB: PriceBook = {
   products: [
     { id: 'oc', name: 'OC', kind: 'open_cell', setPrice: 1000, setSizeGal: 110, ratedYieldBfPerSet: 10000, fieldYieldFactor: 1, wastePct: 0, active: true },
     { id: 'cc', name: 'CC', kind: 'closed_cell', setPrice: 2000, setSizeGal: 110, ratedYieldBfPerSet: 4000, fieldYieldFactor: 0.8, wastePct: 10, active: true },
+    { id: 'oth', name: 'Other foam', kind: 'other', setPrice: 1500, setSizeGal: 110, ratedYieldBfPerSet: 6000, fieldYieldFactor: 1, wastePct: 0, active: true },
     { id: 'coat', name: 'Coat', kind: 'coating', setPrice: 0, setSizeGal: 5, ratedYieldBfPerSet: 0, fieldYieldFactor: 1, wastePct: 0, coatingPricing: 'per_sqft', pricePerSqft: 0.5, active: true },
     { id: 'coatg', name: 'CoatG', kind: 'coating', setPrice: 0, setSizeGal: 5, ratedYieldBfPerSet: 0, fieldYieldFactor: 1, wastePct: 0, coatingPricing: 'per_gal', pricePerGal: 40, coverageSqftPerGal: 100, active: true },
   ],
@@ -31,6 +34,8 @@ const PB: PriceBook = {
     { kind: 'open_cell', thicknessIn: 3, pricePerSqft: 1 },
     { kind: 'open_cell', thicknessIn: 5, pricePerSqft: 2 },
     { kind: 'closed_cell', thicknessIn: 2, pricePerSqft: 3 },
+    { kind: 'other', thicknessIn: 1, pricePerSqft: 0.9 },
+    { kind: 'other', thicknessIn: 3, pricePerSqft: 2.5 },
   ],
 };
 
@@ -115,9 +120,10 @@ describe('sets formula', () => {
     expect(t.setsByProduct[0].setsRounded).toBe(1);
     close(t.materialCost, 1375, 0.01);
   });
-  it('rounded material cost basis charges full sets', () => {
-    const t = computeEstimate({ priceBook: { ...PB, materialCostBasis: 'rounded' }, areas: [free(1000, [{ id: 'l1', productId: 'cc', inches: 2 }])] });
-    close(t.materialCost, 2000, 0.01);
+  it('material is always costed from decimal sets, even if an old book carries materialCostBasis', () => {
+    const legacy = { ...PB, materialCostBasis: 'rounded' } as PriceBook;
+    const t = computeEstimate({ priceBook: legacy, areas: [free(1000, [{ id: 'l1', productId: 'cc', inches: 2 }])] });
+    close(t.materialCost, 1375, 0.01);
   });
 });
 
@@ -139,12 +145,33 @@ describe('estimate totals', () => {
     // trip 100 + 10 mi * 2 = 120
     close(t.tripCost, 120, 0.01);
     close(t.totalCost, 1307.5, 0.01);
-    // margin 50% -> price = cost / 0.5
-    close(t.price, 2615, 0.01);
-    close(t.marginAmt, 1307.5, 0.01);
-    close(t.marginPct, 50, 0.01);
-    close(t.pricePerSqft, 2.62, 0.01);
+    // margin 50% on job cost (1187.5) -> 2375, plus trip 120 at cost
+    close(t.price, 2495, 0.01);
+    close(t.marginAmt, 1187.5, 0.01);
+    close(t.marginPct, (1187.5 / 2495) * 100, 0.1);
+    close(t.pricePerSqft, 2.5, 0.01);
     expect(t.minJobApplied).toBe(false);
+  });
+  it('trip charge and mileage pass through at cost in margin mode', () => {
+    const areas = [free(1000, [{ id: 'l', productId: 'oc', inches: 10 }])];
+    const none = computeEstimate({ priceBook: { ...PB, charges: { ...PB.charges, tripCharge: 0, mileageRate: 0 } }, areas });
+    const withTrip = computeEstimate({ priceBook: PB, miles: 25, areas }); // trip 100 + 25 mi * 2 = 150
+    close(withTrip.tripCost, 150, 0.01);
+    close(withTrip.price - none.price, 150, 0.01);
+    close(withTrip.marginAmt, none.marginAmt, 0.01);
+    close(none.marginPct, 50, 0.01);
+  });
+  it('trip charge and mileage pass through at cost in ladder mode', () => {
+    const areas = [free(1000, [{ id: 'l', productId: 'oc', inches: 3 }])];
+    const none = computeEstimate({ priceBook: { ...PB, charges: { ...PB.charges, tripCharge: 0, mileageRate: 0 } }, pricingMode: 'ladder', areas });
+    const withTrip = computeEstimate({ priceBook: PB, pricingMode: 'ladder', miles: 25, areas });
+    close(withTrip.price - none.price, 150, 0.01);
+    close(withTrip.marginAmt, none.marginAmt, 0.01);
+  });
+  it('min job floor still gives margin = price - total cost', () => {
+    const t = computeEstimate({ priceBook: { ...PB, charges: { ...PB.charges, minJob: 5000 } }, areas: [free(100, [{ id: 'l', productId: 'oc', inches: 3 }])] });
+    expect(t.minJobApplied).toBe(true);
+    close(t.marginAmt, 5000 - t.totalCost, 0.01);
   });
   it('flat labor $/bf', () => {
     const t = computeEstimate({ priceBook: { ...PB, labor: { ...PB.labor, mode: 'flat', laborPerBf: 0.1 } }, areas: [free(1000, [{ id: 'l', productId: 'oc', inches: 5 }])] });
@@ -190,6 +217,26 @@ describe('ladder mode', () => {
     expect(t.pricingMode).toBe('ladder');
     close(t.marginAmt, t.price - t.totalCost, 0.01);
   });
+  it("'other' foam prices from its own ladder rows, not the open-cell ladder", () => {
+    close(ladderPricePerSqft(PB.ladder, 'other', 2)!.pricePerSqft, 1.7); // between 1" $0.9 and 3" $2.5
+    const t = computeEstimate({
+      priceBook: { ...PB, pricingMode: 'ladder' },
+      areas: [free(1000, [{ id: 'l', productId: 'oth', inches: 3 }])],
+    });
+    // other 3" = $2.5/sqft * 1000 = 2500 + trip 100 (open cell 3" would have been $1/sqft)
+    close(t.price, 2600, 0.01);
+    expect(t.warnings.length).toBe(0);
+    expect(t.areas[0].layers[0].ladderNote ?? '').toContain('2.5');
+  });
+  it("'other' foam with no 'other' rows falls back to margin pricing with a warning", () => {
+    const pb = { ...PB, pricingMode: 'ladder' as const, ladder: PB.ladder.filter((r) => r.kind !== 'other') };
+    const t = computeEstimate({ priceBook: pb, areas: [free(1000, [{ id: 'l', productId: 'oth', inches: 3 }])] });
+    // 3000 bf / 6000 = 0.5 set * 1500 = 750 ; labor 3 hr * 2 * 25 = 150 ; job cost 900 / 0.5 = 1800 + trip 100
+    close(t.price, 1900, 0.01);
+    expect(t.warnings.length).toBe(1);
+    expect(t.warnings[0]).toContain('no ladder rows for other');
+    expect(t.areas[0].layers[0].ladderNote ?? '').toContain('no ladder rows for other');
+  });
   it('per-estimate mode override', () => {
     const t = computeEstimate({ priceBook: PB, pricingMode: 'ladder', areas: [free(100, [{ id: 'l', productId: 'oc', inches: 5 }])] });
     close(t.calculatedPrice, 300, 0.01); // 200 + trip 100
@@ -215,10 +262,17 @@ describe('minimum job', () => {
 describe('widget quote range', () => {
   it('band around price book price, min job applied, rounded to $50', () => {
     const q = quoteRange({ ...PB, charges: { ...PB.charges, minJob: 0 } }, { sqft: 1000, foamPref: 'oc', ocInches: 5, ccInches: 2, bandPct: 10 });
-    // OC 5": 5000bf -> 0.5 set=500 ; labor 5hr*50=250 ; trip 100 ; cost 850 ; price 1700 ; +/-10% -> 1530..1870
-    expect(q.low).toBe(1550);
-    expect(q.high).toBe(1850);
+    // OC 5": 5000bf -> 0.5 set=500 ; labor 5hr*50=250 ; job cost 750 / 0.5 = 1500 + trip 100 at cost = 1600 ; +/-10% -> 1440..1760
+    expect(q.low).toBe(1450);
+    expect(q.high).toBe(1750);
     expect(q.minJobApplied).toBe(false);
+  });
+  it('trip charge enters the range at cost, not marked up', () => {
+    const req = { sqft: 1000, foamPref: 'oc' as const, ocInches: 5, ccInches: 2, bandPct: 0 };
+    const noTrip = quoteRange({ ...PB, charges: { tripCharge: 0, mileageRate: 0, minJob: 0 } }, req);
+    const trip = quoteRange({ ...PB, charges: { tripCharge: 100, mileageRate: 2, minJob: 0 } }, req);
+    expect(trip.low - noTrip.low).toBe(100);
+    expect(trip.high - noTrip.high).toBe(100);
   });
   it('not sure spans OC and CC', () => {
     const q = quoteRange(PB, { sqft: 1000, foamPref: 'unsure', ocInches: 5, ccInches: 2, bandPct: 0 });
@@ -235,5 +289,30 @@ describe('widget quote range', () => {
     const t = computeEstimate({ priceBook: SAMPLE_PRICE_BOOK, areas: [free(1500, [{ id: 'l', productId: 'oc-sample', inches: 5.5 }])] });
     expect(t.pricePerSqft).toBeGreaterThan(0.8);
     expect(t.pricePerSqft).toBeLessThan(4);
+  });
+});
+
+describe('price book migration', () => {
+  it('sample book has a labeled sample row for other foam', () => {
+    const rows = SAMPLE_PRICE_BOOK.ladder.filter((r) => r.kind === 'other');
+    expect(rows.length).toBe(1);
+    expect(rows[0].label ?? '').toMatch(/sample/i);
+    expect(SAMPLE_PRICE_BOOK.schemaVersion).toBe(PRICE_BOOK_SCHEMA_VERSION);
+  });
+  it('merges sample other rows into an older saved book and drops materialCostBasis', () => {
+    const old = { ...PB, ladder: PB.ladder.filter((r) => r.kind !== 'other'), materialCostBasis: 'rounded' } as PriceBook;
+    const pb = normalizePriceBook(old);
+    expect(pb.ladder.filter((r) => r.kind === 'other').length).toBe(1);
+    expect(pb.ladder.length).toBe(old.ladder.length + 1);
+    expect(pb.schemaVersion).toBe(PRICE_BOOK_SCHEMA_VERSION);
+    expect('materialCostBasis' in pb).toBe(false);
+    expect(normalizePriceBook(pb)).toEqual(pb);
+  });
+  it('keeps existing other rows and respects rows deleted after migration', () => {
+    const own = { ...PB, ladder: [...PB.ladder] };
+    expect(normalizePriceBook(own).ladder).toEqual(PB.ladder);
+    const migrated = normalizePriceBook({ ...PB, ladder: PB.ladder.filter((r) => r.kind !== 'other') });
+    const deleted = { ...migrated, ladder: migrated.ladder.filter((r) => r.kind !== 'other') };
+    expect(normalizePriceBook(deleted).ladder.some((r) => r.kind === 'other')).toBe(false);
   });
 });

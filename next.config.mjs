@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const isProd = process.env.NODE_ENV === 'production';
-// GitHub Pages project site lives under /sprayfoam-bid-mvp. Override with PAGES_BASE_PATH if needed.
-const basePath = process.env.PAGES_BASE_PATH ?? (isProd ? '/sprayfoam-bid-mvp' : '');
+// GitHub Pages project site lives under /sprayfoam-bid-mvp.
+const basePath = isProd ? '/sprayfoam-bid-mvp' : '';
 
 const nextConfig = {
   output: 'export',

@@ -3,6 +3,7 @@ import type {
   AreaResult,
   EstimateInput,
   EstimateTotals,
+  LadderKind,
   LadderRow,
   LayerResult,
   PriceBook,
@@ -44,7 +45,7 @@ export function priceFromMargin(cost: number, marginPct: number): number {
  */
 export function ladderPricePerSqft(
   ladder: LadderRow[],
-  kind: 'open_cell' | 'closed_cell',
+  kind: LadderKind,
   inches: number,
 ): { pricePerSqft: number; note: string } | null {
   const rows = ladder
@@ -126,7 +127,7 @@ export function computeEstimate(input: EstimateInput): EstimateTotals {
           base.laborCost = base.laborHours * pos(pb.labor.crewSize) * pos(pb.labor.hourlyRate);
         }
         if (mode === 'ladder') {
-          const k = p.kind === 'closed_cell' ? 'closed_cell' : 'open_cell';
+          const k: LadderKind = p.kind === 'closed_cell' ? 'closed_cell' : p.kind === 'other' ? 'other' : 'open_cell';
           const lp = ladderPricePerSqft(pb.ladder, k, base.inches);
           if (lp) {
             base.ladderPrice = lp.pricePerSqft * geo.sqft;
@@ -176,13 +177,12 @@ export function computeEstimate(input: EstimateInput): EstimateTotals {
     });
   }
 
-  const roundedBasis = pb.materialCostBasis === 'rounded';
   let materialCost = 0;
   const setsByProduct: ProductSets[] = [];
   for (const agg of bySet.values()) {
     const p = productsById.get(agg.productId)!;
     agg.setsRounded = Math.ceil(agg.sets - 1e-9);
-    agg.materialCost = (roundedBasis ? agg.setsRounded : agg.sets) * pos(p.setPrice);
+    agg.materialCost = agg.sets * pos(p.setPrice);
     materialCost += agg.materialCost;
     setsByProduct.push(agg);
   }
@@ -190,12 +190,14 @@ export function computeEstimate(input: EstimateInput): EstimateTotals {
   const setsRounded = setsByProduct.reduce((s, p) => s + p.setsRounded, 0);
   const tripCost = pos(pb.charges.tripCharge) + pos(pb.charges.mileageRate) * pos(input.miles);
 
-  const totalCost = materialCost + laborCost + coatingCost + tripCost;
+  const jobCost = materialCost + laborCost + coatingCost;
+  const totalCost = jobCost + tripCost;
+  // Trip charge and mileage pass through at cost in both modes; they are never marked up.
   let calculatedPrice: number;
   if (mode === 'ladder') {
     calculatedPrice = ladderSubtotal + priceFromMargin(coatingCost, marginPct) + tripCost;
   } else {
-    calculatedPrice = priceFromMargin(totalCost, marginPct);
+    calculatedPrice = priceFromMargin(jobCost, marginPct) + tripCost;
   }
   const minJob = pos(pb.charges.minJob);
   const minJobApplied = calculatedPrice < minJob;
