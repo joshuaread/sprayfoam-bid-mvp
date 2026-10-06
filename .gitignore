@@ -1,0 +1,15 @@
+node_modules/
+.next/
+out/
+coverage/
+test-results/
+playwright-report/
+*.tsbuildinfo
+next-env.d.ts
+.env*
+.DS_Store
+# generated at build time by scripts/gen-icons.mjs
+public/icons/*.png
+
+# compiled unit tests
+.test-build/
