@@ -16,7 +16,7 @@ Spray-foam bid calculator MVP: messy measurements to branded PDF bid, plus homeo
 |---|---|
 | Price book | Open cell / closed cell / coating / primer products: set price, set size, rated yield (bf/set), field-yield factor, waste %. Labor as crew x hourly rate x bf/hr production, or a flat $/bf. Trip charge, mileage, minimum job. Pricing mode: cost-plus margin (price = cost / (1 - margin)) or a per-inch price ladder ($/sq ft by foam type and thickness). Seeded with labeled sample numbers. |
 | Estimate builder | Area builders: walls minus openings (segments with mixed heights; doors, windows, garage doors as count x W x H), gable ends, roof deck by pitch (3/12 to 12/12 + custom), attic floor / list of rectangles, Quonset / arch (+ end walls minus openings), metal building preset (walls + gables + roof by pitch), rim joist, freeform sq ft. Each area takes multiple layers (product + inches; coatings by coats). Sticky live totals bar with sq ft, board feet, sets (decimal and rounded up per product), material, labor, trip, min job, coatings, total cost, price, margin $ and %, and $/sq ft. Min-job floor applied automatically with a visible note. |
-| Calc engine | Pure TypeScript in `src/lib/engine/` (no React). Vitest tests for every shape, the sets formula, margin mode, ladder mode, min job, coatings, labor, and the widget range. `engine_version` is stored on every estimate's totals. |
+| Calc engine | Pure TypeScript in `src/lib/engine/` (no React). Unit tests (Node built-in test runner, compiled with tsc) for every shape, the sets formula, margin mode, ladder mode, min job, coatings, labor, and the widget range. `engine_version` is stored on every estimate's totals. |
 | PDFs (client-side, jsPDF) | Branded customer proposal (logo, brand color, contractor info incl. license #, customer/job, scope by area with foam type/thickness/sq ft/optional R-value text, price, terms, validity date, acceptance/signature lines, disclaimer). Internal cost sheet (every input, each area's formula and parts, board feet, sets formula, costs, margin). |
 | Records | Customers, estimate history (search, duplicate, save as new version, status). The price book is **snapshotted** onto each estimate, so later price-book edits don't change old estimates ("refresh from price book" is an explicit action). |
 | Widget | `public/widget.js` (one `<script>` tag) renders an iframe inside shadow DOM, so host CSS can't break it. Flow: project type, approx sq ft (with "help me estimate"), foam preference (OC / CC / not sure), price **range** from the price book +/- a configurable band, min job applied. Gated/ungated toggle. Lead form with name, phone, email, ZIP, consent checkbox, and a honeypot. Leads land in the in-app Leads inbox with "convert to estimate". Contractor email is **stubbed** ("would email contractor at ..."). |
@@ -30,7 +30,7 @@ Requires Node 20+.
 
 ```bash
 npm ci
-npm test          # Vitest unit tests for the calc engine
+npm test          # unit tests for the calc engine (tsc + node --test)
 npm run dev       # http://localhost:3000 (no basePath in dev)
 npm run build     # static export to out/ (basePath /sprayfoam-bid-mvp)
 ```
