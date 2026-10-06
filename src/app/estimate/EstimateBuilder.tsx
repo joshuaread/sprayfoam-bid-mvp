@@ -46,10 +46,12 @@ export function EstimateBuilder() {
     let alive = true;
     (async () => {
       if (id) {
+        creating.current = false;
         const e = await store.getEstimate(id);
         if (alive) setEst(e ? recompute(e) : null);
         return;
       }
+      setEst(null);
       if (creating.current) return;
       creating.current = true;
       const e = await createEstimate();

@@ -69,7 +69,7 @@ export function quoteRange(pb: PriceBook, req: QuoteRequest): QuoteRange {
     minJobApplied = true;
   }
   if (high < minJob) high = minJob;
-  low = roundTo(low, 50);
+  low = Math.max(minJob, roundTo(low, 50));
   high = Math.max(low, roundTo(high, 50));
   return {
     low,
